@@ -8,7 +8,7 @@
 #include "extractor/packed_osm_ids.hpp"
 #include "extractor/scripting_environment.hpp"
 
-#include "traffic_signals.hpp"
+#include "traffic_flow_control_nodes.hpp"
 #include "util/coordinate.hpp"
 #include "util/node_based_graph.hpp"
 
@@ -41,7 +41,9 @@ class NodeBasedGraphFactory
     NodeBasedGraphFactory(ScriptingEnvironment &scripting_environment,
                           std::vector<TurnRestriction> &turn_restrictions,
                           std::vector<UnresolvedManeuverOverride> &maneuver_overrides,
-                          const TrafficSignals &traffic_signals,
+                          const TrafficFlowControlNodes &traffic_signals,
+                          const TrafficFlowControlNodes &stop_signs,
+                          const TrafficFlowControlNodes &give_way_signs,
                           std::unordered_set<NodeID> &&barriers,
                           std::vector<util::Coordinate> &&coordinates,
                           extractor::PackedOSMIDs &&osm_node_ids,
@@ -73,7 +75,9 @@ class NodeBasedGraphFactory
     void Compress(ScriptingEnvironment &scripting_environment,
                   std::vector<TurnRestriction> &turn_restrictions,
                   std::vector<UnresolvedManeuverOverride> &maneuver_overrides,
-                  const TrafficSignals &traffic_signals);
+                  const TrafficFlowControlNodes &traffic_signals,
+                  const TrafficFlowControlNodes &stop_signs,
+                  const TrafficFlowControlNodes &give_way_signs);
 
     // Most ways are bidirectional, making the geometry in forward and backward direction the same,
     // except for reversal. We make use of this fact by keeping only one representation of the

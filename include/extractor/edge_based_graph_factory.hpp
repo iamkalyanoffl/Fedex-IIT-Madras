@@ -23,7 +23,7 @@
 #include "util/typedefs.hpp"
 
 #include "storage/io.hpp"
-#include "traffic_signals.hpp"
+#include "traffic_flow_control_nodes.hpp"
 
 #include <algorithm>
 #include <cstddef>
@@ -69,7 +69,9 @@ class EdgeBasedGraphFactory
                                    EdgeBasedNodeDataContainer &node_data_container,
                                    const CompressedEdgeContainer &compressed_edge_container,
                                    const std::unordered_set<NodeID> &barrier_nodes,
-                                   const TrafficSignals &traffic_signals,
+                                   const TrafficFlowControlNodes &traffic_signals,
+                                   const TrafficFlowControlNodes &stop_signs,
+                                   const TrafficFlowControlNodes &give_way_signs,
                                    const std::vector<util::Coordinate> &coordinates,
                                    const NameTable &name_table,
                                    const std::unordered_set<EdgeID> &segregated_edges,
@@ -135,7 +137,10 @@ class EdgeBasedGraphFactory
     const util::NodeBasedDynamicGraph &m_node_based_graph;
 
     const std::unordered_set<NodeID> &m_barrier_nodes;
-    const TrafficSignals &m_traffic_signals;
+    const TrafficFlowControlNodes &m_traffic_signals;
+    const TrafficFlowControlNodes &m_stop_signs;
+    const TrafficFlowControlNodes &m_give_way_signs;
+
     const CompressedEdgeContainer &m_compressed_edge_container;
 
     const NameTable &name_table;

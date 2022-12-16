@@ -7,6 +7,8 @@ Sequence = require('lib/sequence')
 Handlers = require("lib/way_handlers")
 Relations = require("lib/relations")
 TrafficSignal = require("lib/traffic_signal")
+StopSign = require("lib/stop_sign")
+GiveWay = require("lib/give_way")
 find_access_tag = require("lib/access").find_access_tag
 limit = require("lib/maxspeed").limit
 Utils = require("lib/utils")
@@ -28,6 +30,8 @@ function setup()
       use_turn_restrictions          = true,
       left_hand_driving              = false,
       traffic_light_penalty          = 2,
+      stop_sign_penalty              = 2,
+      give_way_sign_penalty          = 1.5
     },
 
     default_mode              = mode.driving,
@@ -364,6 +368,12 @@ function process_node(profile, node, result, relations)
 
   -- check if node is a traffic light
   result.traffic_lights = TrafficSignal.get_value(node)
+
+  -- check if node is stop sign
+  result.stop_sign = StopSign.get_value(node)
+
+  -- check if node is a give way sign
+  result.give_way = GiveWay.get_value(node)
 end
 
 function process_way(profile, way, result, relations)
@@ -473,8 +483,13 @@ function process_turn(profile, turn)
   local turn_bias = turn.is_left_hand_driving and 1. / profile.turn_bias or profile.turn_bias
 
   if turn.has_traffic_light then
-      turn.duration = profile.properties.traffic_light_penalty
+    turn.duration = profile.properties.traffic_light_penalty
+  elseif turn.has_stop_sign then
+    turn.duration = profile.properties.stop_sign_penalty
+  elseif turn.has_give_way_sign then
+    turn.duration = profile.properties.give_way_sign_penalty
   end
+
 
   if turn.number_of_roads > 2 or turn.source_mode ~= turn.target_mode or turn.is_u_turn then
     if turn.angle >= 0 then

@@ -1,6 +1,7 @@
 #include "extractor/node_based_graph_factory.hpp"
 #include "extractor/files.hpp"
 #include "extractor/graph_compressor.hpp"
+#include "extractor/traffic_flow_control_nodes.hpp"
 #include "storage/io.hpp"
 
 #include "util/log.hpp"
@@ -19,7 +20,9 @@ NodeBasedGraphFactory::NodeBasedGraphFactory(
     ScriptingEnvironment &scripting_environment,
     std::vector<TurnRestriction> &turn_restrictions,
     std::vector<UnresolvedManeuverOverride> &maneuver_overrides,
-    const TrafficSignals &traffic_signals,
+    const TrafficFlowControlNodes &traffic_signals,
+    const TrafficFlowControlNodes &stop_signs,
+    const TrafficFlowControlNodes &give_way_signs,
     std::unordered_set<NodeID> &&barriers,
     std::vector<util::Coordinate> &&coordinates,
     extractor::PackedOSMIDs &&osm_node_ids,
@@ -29,7 +32,12 @@ NodeBasedGraphFactory::NodeBasedGraphFactory(
       coordinates(std::move(coordinates)), osm_node_ids(std::move(osm_node_ids))
 {
     BuildCompressedOutputGraph(edge_list);
-    Compress(scripting_environment, turn_restrictions, maneuver_overrides, traffic_signals);
+    Compress(scripting_environment,
+             turn_restrictions,
+             maneuver_overrides,
+             traffic_signals,
+             stop_signs,
+             give_way_signs);
     CompressGeometry();
     CompressAnnotationData();
 }
@@ -74,11 +82,15 @@ void NodeBasedGraphFactory::BuildCompressedOutputGraph(const std::vector<NodeBas
 void NodeBasedGraphFactory::Compress(ScriptingEnvironment &scripting_environment,
                                      std::vector<TurnRestriction> &turn_restrictions,
                                      std::vector<UnresolvedManeuverOverride> &maneuver_overrides,
-                                     const TrafficSignals &traffic_signals)
+                                     const TrafficFlowControlNodes &traffic_signals,
+                                     const TrafficFlowControlNodes &stop_signs,
+                                     const TrafficFlowControlNodes &give_way_signs)
 {
     GraphCompressor graph_compressor;
     graph_compressor.Compress(barriers,
                               traffic_signals,
+                              stop_signs,
+                              give_way_signs,
                               scripting_environment,
                               turn_restrictions,
                               maneuver_overrides,

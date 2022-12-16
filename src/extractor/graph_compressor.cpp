@@ -22,7 +22,9 @@ namespace extractor
 static constexpr int SECOND_TO_DECISECOND = 10;
 
 void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
-                               const TrafficSignals &traffic_signals,
+                               const TrafficFlowControlNodes &traffic_signals,
+                               const TrafficFlowControlNodes &stop_signs,
+                               const TrafficFlowControlNodes &give_way_signs,
                                ScriptingEnvironment &scripting_environment,
                                std::vector<TurnRestriction> &turn_restrictions,
                                std::vector<UnresolvedManeuverOverride> &maneuver_overrides,
@@ -208,15 +210,22 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
                 graph.GetEdgeData(reverse_e2).annotation_data = selectAnnotation(
                     rev_edge_data2.annotation_data, rev_edge_data1.annotation_data);
 
-                // Add node penalty when compress edge crosses a traffic signal
-                const bool has_forward_signal = traffic_signals.HasSignal(node_u, node_v);
-                const bool has_reverse_signal = traffic_signals.HasSignal(node_w, node_v);
+                // Add node penalty when compress edge crosses a traffic signal/stop sign/give way
+                const bool has_forward_signal = traffic_signals.Has(node_u, node_v);
+                const bool has_reverse_signal = traffic_signals.Has(node_w, node_v);
+
+                const bool has_forward_stop_sign = stop_signs.Has(node_u, node_v);
+                const bool has_reverse_stop_sign = stop_signs.Has(node_w, node_v);
+
+                const bool has_forward_give_way_sign = give_way_signs.Has(node_u, node_v);
+                const bool has_reverse_give_way_sign = give_way_signs.Has(node_w, node_v);
 
                 EdgeDuration forward_node_duration_penalty = MAXIMAL_EDGE_DURATION;
                 EdgeWeight forward_node_weight_penalty = INVALID_EDGE_WEIGHT;
                 EdgeDuration reverse_node_duration_penalty = MAXIMAL_EDGE_DURATION;
                 EdgeWeight reverse_node_weight_penalty = INVALID_EDGE_WEIGHT;
-                if (has_forward_signal || has_reverse_signal)
+                if (has_forward_signal || has_reverse_signal || has_forward_stop_sign ||
+                    has_reverse_stop_sign || has_forward_give_way_sign || has_reverse_give_way_sign)
                 {
                     // we cannot handle this as node penalty, if it depends on turn direction
                     if (fwd_edge_data1.flags.restricted != fwd_edge_data2.flags.restricted)
@@ -228,7 +237,10 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
                     ExtractionTurn extraction_turn(0,
                                                    2,
                                                    false,
-                                                   true,
+                                                   has_forward_signal || has_reverse_signal,
+                                                   has_forward_stop_sign || has_reverse_stop_sign,
+                                                   has_forward_give_way_sign ||
+                                                       has_reverse_give_way_sign,
                                                    false,
                                                    false,
                                                    TRAVEL_MODE_DRIVING,
@@ -253,10 +265,10 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
                     scripting_environment.ProcessTurn(extraction_turn);
 
                     auto update_direction_penalty = [&extraction_turn, weight_multiplier](
-                                                        bool signal,
+                                                        bool has_traffic_control_node,
                                                         EdgeDuration &duration_penalty,
                                                         EdgeWeight &weight_penalty) {
-                        if (signal)
+                        if (has_traffic_control_node)
                         {
                             duration_penalty = to_alias<EdgeDuration>(extraction_turn.duration *
                                                                       SECOND_TO_DECISECOND);
@@ -265,10 +277,12 @@ void GraphCompressor::Compress(const std::unordered_set<NodeID> &barrier_nodes,
                         }
                     };
 
-                    update_direction_penalty(has_forward_signal,
+                    update_direction_penalty(has_forward_signal || has_forward_stop_sign ||
+                                                 has_forward_give_way_sign,
                                              forward_node_duration_penalty,
                                              forward_node_weight_penalty);
-                    update_direction_penalty(has_reverse_signal,
+                    update_direction_penalty(has_reverse_signal || has_reverse_stop_sign ||
+                                                 has_reverse_give_way_sign,
                                              reverse_node_duration_penalty,
                                              reverse_node_weight_penalty);
                 }

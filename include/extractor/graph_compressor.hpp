@@ -4,7 +4,7 @@
 #include "extractor/scripting_environment.hpp"
 #include "util/typedefs.hpp"
 
-#include "traffic_signals.hpp"
+#include "traffic_flow_control_nodes.hpp"
 #include "util/node_based_graph.hpp"
 
 #include <memory>
@@ -26,7 +26,9 @@ class GraphCompressor
 
   public:
     void Compress(const std::unordered_set<NodeID> &barrier_nodes,
-                  const TrafficSignals &traffic_signals,
+                  const TrafficFlowControlNodes &traffic_signals,
+                  const TrafficFlowControlNodes &stop_signs,
+                  const TrafficFlowControlNodes &give_way_signs,
                   ScriptingEnvironment &scripting_environment,
                   std::vector<TurnRestriction> &turn_restrictions,
                   std::vector<UnresolvedManeuverOverride> &maneuver_overrides,

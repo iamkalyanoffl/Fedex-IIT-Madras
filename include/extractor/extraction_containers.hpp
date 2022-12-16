@@ -8,8 +8,7 @@
 #include "extractor/scripting_environment.hpp"
 
 #include "storage/tar_fwd.hpp"
-#include "traffic_lights.hpp"
-#include "traffic_signals.hpp"
+#include "traffic_flow_control_nodes.hpp"
 
 #include <unordered_map>
 #include <unordered_set>
@@ -27,20 +26,29 @@ namespace extractor
  */
 class ExtractionContainers
 {
+  public:
+    using InputTrafficFlowControlNode = std::pair<OSMNodeID, TrafficFlowControlNodeDirection>;
+
+  private:
     using ReferencedWays = std::unordered_map<OSMWayID, NodesOfWay>;
-    using ReferencedTrafficSignals =
+    using ReferencedTrafficFlowControlNodes =
         std::pair<std::unordered_set<OSMNodeID>, std::unordered_multimap<OSMNodeID, OSMNodeID>>;
     // The relationship between way and nodes is lost during node preparation.
     // We identify the ways and nodes relevant to restrictions/overrides/signals prior to
     // node processing so that they can be referenced in the preparation phase.
     ReferencedWays IdentifyRestrictionWays();
     ReferencedWays IdentifyManeuverOverrideWays();
-    ReferencedTrafficSignals IdentifyTrafficSignals();
+
+    ReferencedTrafficFlowControlNodes IdentifyTrafficFlowControlNodes(
+        const std::vector<InputTrafficFlowControlNode> &external_traffic_control_nodes);
 
     void PrepareNodes();
     void PrepareManeuverOverrides(const ReferencedWays &maneuver_override_ways);
     void PrepareRestrictions(const ReferencedWays &restriction_ways);
-    void PrepareTrafficSignals(const ReferencedTrafficSignals &referenced_traffic_signals);
+    void PrepareTrafficFlowControlNodes(
+        const ReferencedTrafficFlowControlNodes &referenced_traffic_control_nodes,
+        TrafficFlowControlNodes &internal_traffic_control_nodes);
+
     void PrepareEdges(ScriptingEnvironment &scripting_environment);
 
     void WriteCharData(const std::string &file_name);
@@ -54,7 +62,6 @@ class ExtractionContainers
     using NameOffsets = std::vector<size_t>;
     using WayIDVector = std::vector<OSMWayID>;
     using WayNodeIDOffsets = std::vector<size_t>;
-    using InputTrafficSignal = std::pair<OSMNodeID, TrafficLightClass::Direction>;
 
     std::vector<OSMNodeID> barrier_nodes;
     NodeIDVector used_node_id_list;
@@ -69,8 +76,14 @@ class ExtractionContainers
 
     unsigned max_internal_node_id;
 
-    std::vector<InputTrafficSignal> external_traffic_signals;
-    TrafficSignals internal_traffic_signals;
+    std::vector<InputTrafficFlowControlNode> external_traffic_signals;
+    TrafficFlowControlNodes internal_traffic_signals;
+
+    std::vector<InputTrafficFlowControlNode> external_stop_signs;
+    TrafficFlowControlNodes internal_stop_signs;
+
+    std::vector<InputTrafficFlowControlNode> external_give_ways;
+    TrafficFlowControlNodes internal_give_way_signs;
 
     std::vector<NodeBasedEdge> used_edges;
 
