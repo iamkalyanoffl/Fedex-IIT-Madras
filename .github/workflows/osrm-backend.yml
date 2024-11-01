@@ -31,8 +31,6 @@ jobs:
       BUILD_TYPE: Release
     steps:
     - uses: actions/checkout@v4
-    - run: pip install "conan<2.0.0"
-    - run: conan --version
     - run: cmake --version
     - uses: actions/setup-node@v4
       with:
@@ -51,6 +49,12 @@ jobs:
       run: |
         mkdir build
         cd build
+
+        python3 -m venv .venv
+        source .venv/Scripts/Activate
+        python3 -m pip install conan==2.7.1
+        conan profile detect --force
+
         cmake -DCMAKE_BUILD_TYPE=Release -DENABLE_CONAN=ON -DENABLE_NODE_BINDINGS=ON ..
         cmake --build . --config Release
         
@@ -393,10 +397,10 @@ jobs:
     - name: Enable Conan cache
       uses: actions/cache@v4
       with:
-        path: ~/.conan
-        key: v9-conan-${{ matrix.name }}-${{ github.sha }}
+        path: ~/.conan2
+        key: v10-conan-${{ matrix.name }}-${{ github.sha }}
         restore-keys: |
-          v9-conan-${{ matrix.name }}-
+          v10-conan-${{ matrix.name }}-
     - name: Enable test cache
       uses: actions/cache@v4
       with:
@@ -457,8 +461,6 @@ jobs:
     
     - name: Install dev dependencies
       run: |
-        python3 -m pip install "conan<2.0.0" || python3 -m pip install "conan<2.0.0" --break-system-packages
-
         # workaround for issue that GitHub Actions seems to not adding it to PATH after https://github.com/actions/runner-images/pull/6499
         # and that's why CI cannot find conan executable installed above
         if [[ "${RUNNER_OS}" == "macOS" ]]; then
@@ -495,20 +497,6 @@ jobs:
         tar zxvf onetbb.tgz
         sudo cp -a oneapi-tbb-${TBB_VERSION}/lib/. /usr/local/lib/
         sudo cp -a oneapi-tbb-${TBB_VERSION}/include/. /usr/local/include/
-    - name: Add Clang 18 to list of Conan compilers # workaround for the issue that Conan 1.x doesn't know about Clang 18
-      if: ${{ matrix.ENABLE_CONAN == 'ON' && matrix.CCOMPILER == 'clang-18' }}
-      run: |
-        sudo wget https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
-
-        conan config init
-        yq eval '.compiler.clang.version += ["18"]' -i "$HOME/.conan/settings.yml"
-    - name: Add Apple-clang 16 to list of Conan compilers # workaround for the issue that Conan 1.x doesn't know about Apple-clang 16
-      if: ${{ matrix.ENABLE_CONAN == 'ON' && matrix.runs-on == 'macos-14' }}
-      run: |
-        sudo wget https://github.com/mikefarah/yq/releases/download/v4.9.6/yq_darwin_arm64 -O /usr/local/bin/yq && sudo chmod +x /usr/local/bin/yq
-
-        conan config init
-        yq eval '.compiler.apple-clang.version += ["16.0"]' -i "$HOME/.conan/settings.yml"
     - name: Prepare build
       run: |
         mkdir ${OSRM_BUILD_DIR}
@@ -530,7 +518,14 @@ jobs:
       run: |
         echo "Using ${JOBS} jobs"
         pushd ${OSRM_BUILD_DIR}
-        
+
+        if [[ "${ENABLE_CONAN}" == "ON" ]]; then
+          python3 -m venv .venv
+          source .venv/bin/activate
+          python3 -m pip install conan==2.7.1
+          conan profile detect --force
+        fi
+
         ccache --zero-stats
         cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE} \
                  -DENABLE_CONAN=${ENABLE_CONAN:-OFF} \
@@ -544,6 +539,7 @@ jobs:
                  -DENABLE_CCACHE=ON \
                  -DENABLE_LTO=${ENABLE_LTO:-ON} \
                  -DCMAKE_INSTALL_PREFIX=${OSRM_INSTALL_DIR}
+
         make --jobs=${JOBS}
 
         if [[ "${NODE_PACKAGE_TESTS_ONLY}" != "ON" ]]; then
@@ -558,7 +554,7 @@ jobs:
         fi
         popd
     - name: Build example
-      if: ${{ matrix.NODE_PACKAGE_TESTS_ONLY != 'ON' }}
+      if: ${{ matrix.NODE_PACKAGE_TESTS_ONLY != 'ON' && matrix.ENABLE_CONAN != 'ON' }}
       run: |
         mkdir example/build && pushd example/build
         cmake .. -DCMAKE_BUILD_TYPE=${BUILD_TYPE}
@@ -570,8 +566,10 @@ jobs:
         make -C test/data benchmark
 
         # macOS SIP strips the linker path. Reset this inside the running shell
-        export LD_LIBRARY_PATH=${{ env.LD_LIBRARY_PATH }}
-        ./example/build/osrm-example test/data/mld/monaco.osrm
+        if [[ "${ENABLE_CONAN}" == "OFF" ]]; then
+          export LD_LIBRARY_PATH=${{ env.LD_LIBRARY_PATH }}
+          ./example/build/osrm-example test/data/mld/monaco.osrm
+        fi
 
         # All tests assume to be run from the build directory
         pushd ${OSRM_BUILD_DIR}
@@ -681,7 +679,7 @@ jobs:
           python3 -m venv .venv
           source .venv/bin/activate
           echo PATH=$PATH >> $GITHUB_ENV
-          pip install "conan<2.0.0" "requests==2.31.0" "numpy==1.26.4" 
+          pip install "conan==2.7.1" "requests==2.31.0" "numpy==1.26.4" 
       - name: Prepare data
         run: |
           if [ "$RUN_BIG_BENCHMARK" = "true" ]; then
