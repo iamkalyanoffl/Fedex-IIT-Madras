@@ -7,7 +7,7 @@ Functionalities :
 - Trip - Solves the Traveling Salesman Problem using a greedy heuristic
 - Tile - Generates Mapbox Vector Tiles with internal routing metadata
 
-reference - OSRM documentation 
+reference - OSRM documentation , TOM-TOM , Here, Google Maps, Aviation Stack , Open Weather, AQICN
 
 
 
