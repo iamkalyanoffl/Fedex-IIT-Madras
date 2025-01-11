@@ -10,4 +10,4 @@ Functionalities :
 reference - OSRM documentation , TOM-TOM , Here, Google Maps, Aviation Stack , Open Weather, AQICN
 
 
-To quickly try OSRM use our demo server which comes with both the backend and a frontend on top.
+To quickly try OSRM use our https://map.project-osrm.org/?z=7&center=50.345460%2C5.449219&hl=en&alt=0&srv=1 which comes with both the backend and a frontend on top.
